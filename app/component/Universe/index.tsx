@@ -11,7 +11,7 @@ const wrapperStyle : React.CSSProperties = {
 };
 const innerStyle : React.CSSProperties = {
     flex: 1,
-    border: '1px solid red',
+    border: '1px solid #CCC',
     overflow: 'hidden',
 };
 
@@ -22,34 +22,19 @@ class Universe extends React.Component {
     private camera;
     private renderer;
     private control;
+    private globe;
+    private light;
 
-    private resizeHandler = debounce((e) => {
+    private resizeHandler = debounce(() => {
         this.camera.aspect = this.content.clientWidth / this.content.clientHeight;
         this.camera.updateProjectionMatrix();
         this.renderer.setSize(this.content.clientWidth, this.content.clientHeight);
     }, 100);
 
     public componentDidMount() {
-        const ratio = this.content.clientWidth / this.content.clientHeight;
-        this.scene = new THREE.Scene();
-        this.camera = new THREE.PerspectiveCamera(30, ratio, 0.1, 1000);
-        this.camera.position.set(50, 40, 120);
-        this.camera.lookAt(new THREE.Vector3(0 , 0, 0));
-        this.renderer = new THREE.WebGLRenderer({alpha: true, antialias: true});
-        this.control = new (OrbitControl(THREE))(this.camera, this.renderer.domElement);
-        const light = new THREE.DirectionalLight(new THREE.Color('rgb(255, 255, 255)'));
-        light.position.set(0, 5, 5);
-        light.castShadow = true;
-        const geometry = new THREE.BoxGeometry(1, 1, 1);
-        const material = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-        const cube = new THREE.Mesh(geometry, material);
-        this.scene.add(cube);
-        this.camera.position.z = 5;
-        this.renderer.render(this.scene, this.camera);
-        this.renderer.setSize(this.content.clientWidth, this.content.clientHeight);
-        this.content.appendChild(this.renderer.domElement);
-        window.addEventListener('resize', this.resizeHandler);
-        this.animate();
+        this.init();
+        this.renderGlobe();
+        this.renderLight();
     }
     public componentWillUnmount() {
         window.removeEventListener('resize', this.resizeHandler);
@@ -62,7 +47,44 @@ class Universe extends React.Component {
           </div>
         );
     }
-
+    private init = () => {
+        this.scene = new THREE.Scene();
+        this.camera = new THREE.PerspectiveCamera(30, null, 0.1, 1000);
+        this.camera.position.set(50, 40, 120);
+        this.camera.lookAt(new THREE.Vector3(0 , 0, 0));
+        this.renderer = new THREE.WebGLRenderer({alpha: true, antialias: true});
+        this.control = new (OrbitControl(THREE))(this.camera, this.renderer.domElement);
+        this.control.zoomSpeed = 0.2;
+        this.camera.position.z = 1;
+        this.renderer.render(this.scene, this.camera);
+        this.renderer.setSize(this.content.clientWidth, this.content.clientHeight);
+        this.content.appendChild(this.renderer.domElement);
+        this.resizeHandler();
+        window.addEventListener('resize', this.resizeHandler);
+        this.animate();
+    }
+    private renderLight = () => {
+        this.light = new THREE.DirectionalLight(new THREE.Color(0xC9919B));
+        this.light.position.set(0, 5, 5);
+        this.light.castShadow = true;
+        const ambient = new THREE.AmbientLight(0x523B3F); // soft white light
+        this.scene.add(ambient);
+        this.scene.add(this.light);
+    }
+    private renderGlobe = () => {
+        const globe = new THREE.SphereGeometry(8, 32, 32);
+        const wireFrameGeometry = new THREE.SphereGeometry(8.2, 8, 8);
+        const wireframe = new THREE.WireframeGeometry(wireFrameGeometry);
+        const wireLines = new THREE.LineSegments(wireframe);
+        // console.log(wireLines);
+        wireLines.material.depthTest = false;
+        wireLines.material.opacity = 0.3;
+        wireLines.material.transparent = true;
+        wireLines.material.color = new THREE.Color(0xc9919b);
+        const material = new THREE.MeshLambertMaterial({ color: 0x888888, opacity: 0.5 });
+        this.globe = new THREE.Mesh(globe, material);
+        this.scene.add(this.globe, wireLines);
+    }
     private animate = () => {
         this.control.update();
         requestAnimationFrame(this.animate);
