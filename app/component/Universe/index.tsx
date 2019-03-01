@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import debounce from 'lodash/debounce';
 import OrbitControl from 'three-orbit-controls';
 
-// import cloud from '@/assets/fair_clouds.4k.png';
+import cloudMap from '@/assets/fair_clouds.png';
 import { mapTexture } from './utils/mapTexture';
 
 const GLOBE_SIZE = 8;
@@ -59,8 +59,9 @@ class Universe extends React.Component {
         this.init();
         this.renderGlobe();
         this.renderLight();
-        this.loadLand();
         this.loadCloud();
+        this.loadLand();
+        SATELLITE.forEach(it => this.addSatellite(it));
     }
     public componentWillUnmount() {
         window.removeEventListener('resize', this.resizeHandler);
@@ -87,7 +88,6 @@ class Universe extends React.Component {
         this.resizeHandler();
         window.addEventListener('resize', this.resizeHandler);
         this.animate();
-        SATELLITE.forEach(it => this.addSatellite(it));
     }
     private renderLight = () => {
         const light = new THREE.SpotLight(new THREE.Color(0xffffff), 0.4);
@@ -101,7 +101,7 @@ class Universe extends React.Component {
         // this.scene.add(sun);
     }
     private renderGlobe = () => {
-        const cloud = new THREE.SphereGeometry(GLOBE_SIZE + 0.3, 32, 32);
+        const cloud = new THREE.SphereGeometry(GLOBE_SIZE + 0.2, 32, 32);
         const material = new THREE.MeshLambertMaterial({
             color: 0x003366,
             // opacity: 0.9,
@@ -112,11 +112,21 @@ class Universe extends React.Component {
         });
 
         this.cloudLayer = new THREE.Mesh(cloud, tM);
+        const shieldLayer = new THREE.Mesh(
+            new THREE.SphereGeometry(GLOBE_SIZE + 0.25, 32, 32),
+            new THREE.MeshStandardMaterial({
+                color: 0xffffff,
+                opacity: 0.2,
+                transparent: true,
+                metalness: 1,
+                roughness: 0.6,
+            }),
+        );
         this.globe = new THREE.Mesh(
             new THREE.SphereGeometry(GLOBE_SIZE, 32, 32),
             material,
         );
-        this.scene.add(this.globe, this.cloudLayer);
+        this.scene.add(this.globe, this.cloudLayer, shieldLayer);
     }
     private animate = () => {
         this.control.update();
@@ -151,15 +161,17 @@ class Universe extends React.Component {
 
         const mapMaterial  = new THREE.MeshPhongMaterial({
             map,
-            // bumpMap,
-            // bumpScale: 0.2,
+            bumpMap,
+            bumpScale: 0.2,
         });
         this.globe.material = mapMaterial;
 
     }
     private loadCloud = async () => {
         const loader = new THREE.TextureLoader();
-        const mapOverlay = loader.load('https://raw.githubusercontent.com/turban/webgl-earth/master/images/fair_clouds_4k.png');
+        const high = 'https://raw.githubusercontent.com/turban/webgl-earth/master/images/fair_clouds_4k.png';
+        const low = cloudMap;
+        const mapOverlay = loader.load(low);
         this.cloudLayer.material = new THREE.MeshPhongMaterial({
             map: mapOverlay,
             color: 0xdddddd,
@@ -196,20 +208,20 @@ class Universe extends React.Component {
         const mesh = new THREE.Mesh(geometry, material);
         mesh.position.y = satellite.radius;
 
-        const communicateRadius = new THREE.CircleGeometry(3, 64);
+        const communicateRadius = new THREE.CircleGeometry(3, 32);
         communicateRadius.vertices.shift();
         communicateRadius.vertices.push(communicateRadius.vertices[0].clone());
         const communicateArea = new THREE.Line(
             communicateRadius,
             new THREE.LineDashedMaterial({
-                color: 'cyan',
-                opacity: 0.4,
+                color: 'violet',
+                opacity: 0.6,
                 transparent: true,
                 // depthTest: false,
             }),
         );
         communicateArea.rotation.x = Math.PI / 2;
-        communicateArea.position.y = GLOBE_SIZE - 0.28;
+        communicateArea.position.y = GLOBE_SIZE - 0.3;
         pivot.add(communicateArea);
         const light = new THREE.SpotLight(new THREE.Color(0x00ffff), 1);
         light.penumbra = 0.1;
