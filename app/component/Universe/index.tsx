@@ -1,8 +1,13 @@
 import React from 'react';
-import { mesh as topoMesh } from 'topojson';
+import {
+    mesh as topoMesh,
+    feature as topoFeature,
+} from 'topojson';
 import * as THREE from 'three';
 import debounce from 'lodash/debounce';
 import OrbitControl from 'three-orbit-controls';
+
+import { mapTexture } from './utils/mapTexture';
 
 const GLOBE_SIZE = 8;
 
@@ -88,38 +93,35 @@ class Universe extends React.Component {
         this.animate();
     }
     private renderLight = () => {
-        const light = new THREE.SpotLight(new THREE.Color(0xffffff), 0.2);
+        const light = new THREE.SpotLight(new THREE.Color(0xffffff), 0.4);
         light.penumbra = 1;
         light.angle = 0.4;
-        // light.position.set(5, 0, 0);
         light.castShadow = true;
         this.camera.add(light);
         this.scene.add(this.camera);
-        // const ambient = new THREE.AmbientLight(0x444444); // soft white light
-        // this.scene.add(ambient);
-        // this.scene.add(this.light);
-        const sun = new THREE.PointLight(new THREE.Color(0xffffff), 0.8);
+        const sun = new THREE.PointLight(new THREE.Color(0xffffff), 0.7);
         sun.position.set(100, 0, -100);
         this.scene.add(sun);
     }
     private renderGlobe = () => {
         const globe = new THREE.SphereGeometry(GLOBE_SIZE, 32, 32);
-        const wireFrameGeometry = new THREE.SphereGeometry(GLOBE_SIZE, 4, 4);
+        const wireFrameGeometry = new THREE.SphereGeometry(GLOBE_SIZE, 6, 6);
         const wireLines = new THREE.LineSegments(
             new THREE.WireframeGeometry(wireFrameGeometry),
             new THREE.LineBasicMaterial({
-                color: 0x333333,
-                opacity: 0.1,
+                color: 0x3987c9,
+                opacity: 0.2,
                 depthTest: false,
                 transparent: true,
             })
         );
         const material = new THREE.MeshLambertMaterial({
             color: 0x3987c9,
-            opacity: 0.5,
+            opacity: 0.6,
+            transparent: true,
         });
         this.globe = new THREE.Mesh(globe, material);
-        // this.globe.add(wireLines);
+        this.globe.add(wireLines);
         this.scene.add(this.globe);
     }
     private animate = () => {
@@ -133,13 +135,31 @@ class Universe extends React.Component {
     }
     private setContent = ref => this.content = ref;
     private loadLand = async () => {
-        const topology = await (await fetch('https://unpkg.com/world-atlas@1.1.4/world/50m.json')).json();
-        // console.log(topology);
-        const mesh = topoMesh(topology, topology.objects.land);
-        const t = wireframe(mesh, GLOBE_SIZE, new THREE.LineBasicMaterial({
-            color: 0x00ff00,
-        }));
-        this.globe.add(t);
+        // Try some d3 shit
+        const world = await (await fetch('https://raw.githubusercontent.com/sghall/webgl-globes/master/data/world.json')).json();
+        // const topology = await (await fetch('https://unpkg.com/world-atlas@1.1.4/world/50m.json')).json();
+        // // console.log(topology);
+        // const mesh = topoMesh(topology, topology.objects.land);
+        // const t = wireframe(mesh, GLOBE_SIZE, new THREE.LineBasicMaterial({
+        //     color: 0x00ff00,
+        // }));
+        // this.globe.add(t);
+
+        const countries = topoFeature(world, world.objects.countries);
+        const texturCanvas = mapTexture(countries, '#FFFFFF');
+        const map = new THREE.Texture(texturCanvas.node());
+        map.needsUpdate = true;
+        texturCanvas.remove();
+        const mapMaterial  = new THREE.MeshPhongMaterial({
+            map, transparent: true,
+            opacity: 0.5
+        });
+        const globeWithBorder = new THREE.Mesh(
+            new THREE.SphereGeometry(GLOBE_SIZE, 32, 32),
+            mapMaterial,
+        );
+        this.globe.add(globeWithBorder);
+        // this.globe.material = mapMaterial;
     }
 }
 
