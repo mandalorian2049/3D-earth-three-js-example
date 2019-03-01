@@ -5,7 +5,7 @@ const projection = geoEquirectangular()
   .translate([1024, 512])
   .scale(325);
 
-export const mapTexture = (geojson, color) => {
+export const mapTexture = (geojson) => {
 
   const canvas = select('body').append('canvas')
     // .style('display', 'none')
@@ -13,8 +13,10 @@ export const mapTexture = (geojson, color) => {
     .attr('height', '1024px');
 
   const context = canvas.node().getContext('2d');
-  // context.fillStyle = 'blue';
-  // context.fillRect(0, 0, canvas.width, canvas.height);
+  context.beginPath();
+  context.rect(-1, -1, canvas.node().width + 1, canvas.node().height + 1);
+  context.fillStyle = '#001A33';
+  context.fill();
 
   const path = geoPath()
     .projection(projection)
@@ -22,17 +24,14 @@ export const mapTexture = (geojson, color) => {
 
   // console.log(path);
 
-  context.strokeStyle = '#333';
+  context.strokeStyle = '#00aaff';
   context.lineWidth = 1;
-  context.fillStyle = color || '#CDB380';
+  context.fillStyle = '#004080';
 
   context.beginPath();
 
   path(geojson);
-
-  if (color) {
-    context.fill();
-  }
+  context.fill();
 
   context.stroke();
 
