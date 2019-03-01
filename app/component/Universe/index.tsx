@@ -7,20 +7,23 @@ import * as THREE from 'three';
 import debounce from 'lodash/debounce';
 import OrbitControl from 'three-orbit-controls';
 
-import cloud from '@/assets/fair_clouds.4k.png';
+// import cloud from '@/assets/fair_clouds.4k.png';
 import { mapTexture } from './utils/mapTexture';
 
 const GLOBE_SIZE = 8;
 
 interface SatelliteInterface {
+    id : string;
     rotation : number;
     radius : number;
+    startingPoint : number;
+    speed : number;
 }
 
 const SATELLITE : Array<SatelliteInterface> = [
-    { rotation: Math.PI * (1/3), radius: GLOBE_SIZE + 2  },
-    { rotation: Math.PI * (2/3), radius: GLOBE_SIZE + 4 },
-    { rotation: Math.PI, radius: GLOBE_SIZE + 3 },
+    { id: 'a', rotation: Math.PI * (1/3), radius: GLOBE_SIZE + 2, startingPoint: 0, speed: -1 },
+    { id: 'b', rotation: Math.PI * (2/3), radius: GLOBE_SIZE + 4, startingPoint: Math.PI * (2 / 3), speed: 0.5 },
+    { id: 'c', rotation: Math.PI, radius: GLOBE_SIZE + 3, startingPoint: Math.PI * (4 / 3), speed: -1.2 },
 ];
 
 const wrapperStyle : React.CSSProperties = {
@@ -44,6 +47,7 @@ class Universe extends React.Component {
     private control;
     private globe;
     private cloudLayer;
+    private satelliteControl = {};
 
     private resizeHandler = debounce(() => {
         this.camera.aspect = this.content.clientWidth / this.content.clientHeight;
@@ -86,7 +90,7 @@ class Universe extends React.Component {
         SATELLITE.forEach(it => this.addSatellite(it));
     }
     private renderLight = () => {
-        const light = new THREE.SpotLight(new THREE.Color(0xffffff), 0.8);
+        const light = new THREE.SpotLight(new THREE.Color(0xffffff), 0.4);
         light.penumbra = 1;
         light.angle = 0.4;
         light.castShadow = true;
@@ -97,17 +101,7 @@ class Universe extends React.Component {
         // this.scene.add(sun);
     }
     private renderGlobe = () => {
-        const globe = new THREE.SphereGeometry(GLOBE_SIZE, 32, 32);
-        const wireFrameGeometry = new THREE.SphereGeometry(GLOBE_SIZE - 0.2, 6, 6);
-        const wireLines = new THREE.LineSegments(
-            new THREE.WireframeGeometry(wireFrameGeometry),
-            new THREE.LineBasicMaterial({
-                color: 0x3987c9,
-                opacity: 0.1,
-                // depthTest: false,
-                transparent: true,
-            })
-        );
+        const cloud = new THREE.SphereGeometry(GLOBE_SIZE + 0.3, 32, 32);
         const material = new THREE.MeshLambertMaterial({
             color: 0x003366,
             // opacity: 0.9,
@@ -117,15 +111,12 @@ class Universe extends React.Component {
             transparent: true,
         });
 
-        const outerShield = new THREE.Mesh(globe, tM);
+        this.cloudLayer = new THREE.Mesh(cloud, tM);
         this.globe = new THREE.Mesh(
-            new THREE.SphereGeometry(GLOBE_SIZE - 0.3, 32, 32),
+            new THREE.SphereGeometry(GLOBE_SIZE, 32, 32),
             material,
         );
-        // this.globe.add(wireLines);
-        this.scene.add(this.globe);
-        this.scene.add(outerShield);
-        this.cloudLayer = outerShield;
+        this.scene.add(this.globe, this.cloudLayer);
     }
     private animate = () => {
         this.control.update();
@@ -137,6 +128,13 @@ class Universe extends React.Component {
         if (this.cloudLayer) {
             this.cloudLayer.rotation.y += 0.001;
         }
+        SATELLITE.forEach((it) => {
+            const satellite = this.satelliteControl[it.id];
+            if (satellite && satellite.pivot) {
+                satellite.pivot.rotation.z += (0.01 * it.speed);
+            }
+
+        });
         this.renderer.render(this.scene, this.camera);
     }
     private setContent = ref => this.content = ref;
@@ -153,8 +151,8 @@ class Universe extends React.Component {
 
         const mapMaterial  = new THREE.MeshPhongMaterial({
             map,
-            bumpMap,
-            bumpScale: 0.2,
+            // bumpMap,
+            // bumpScale: 0.2,
         });
         this.globe.material = mapMaterial;
 
@@ -171,23 +169,58 @@ class Universe extends React.Component {
         });
     }
     private addSatellite = (satellite : SatelliteInterface) => {
-        const circleGeom = new THREE.CircleGeometry(satellite.radius, 64);
-        circleGeom.vertices.shift();
-        circleGeom.vertices.push(circleGeom.vertices[0].clone());
-        const circle = new THREE.LineSegments(
-            circleGeom,
+        // const circleGeom = new THREE.CircleGeometry(satellite.radius, 128);
+        // circleGeom.vertices.shift();
+        // circleGeom.vertices.push(circleGeom.vertices[0].clone());
+        // const circle = new THREE.LineSegments(
+        //     circleGeom,
+        //     new THREE.LineDashedMaterial({
+        //         color: 'cyan',
+        //         opacity: 0.3,
+        //         transparent: true,
+        //         linewidth: 5,
+        //         scale: 1,
+        //         dashSize: 10,
+        //         gapSize: 0,
+        //     }),
+        // );
+        // circle.rotation.x = satellite.rotation + (Math.PI / 2);
+        // // this.scene.add(circle);
+
+        const pivot = new THREE.Object3D();
+        const geometry = new THREE.BoxGeometry(1, 2, 1);
+        const material = new THREE.MeshBasicMaterial({
+            color: 'cyan',
+            wireframe: true
+        });
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.position.y = satellite.radius;
+
+        const communicateRadius = new THREE.CircleGeometry(3, 64);
+        communicateRadius.vertices.shift();
+        communicateRadius.vertices.push(communicateRadius.vertices[0].clone());
+        const communicateArea = new THREE.Line(
+            communicateRadius,
             new THREE.LineDashedMaterial({
                 color: 'cyan',
-                opacity: 0.3,
+                opacity: 0.4,
                 transparent: true,
-                linewidth: 1,
-                scale: 1,
-                dashSize: 3,
-                gapSize: 1,
+                // depthTest: false,
             }),
         );
-        circle.rotation.x = satellite.rotation + (Math.PI / 2);
-        this.scene.add(circle);
+        communicateArea.rotation.x = Math.PI / 2;
+        communicateArea.position.y = GLOBE_SIZE - 0.28;
+        pivot.add(communicateArea);
+        const light = new THREE.SpotLight(new THREE.Color(0x00ffff), 1);
+        light.penumbra = 0.1;
+        light.angle = 1;
+        light.castShadow = true;
+        mesh.add(light);
+        pivot.add(mesh);
+        pivot.rotation.x = satellite.rotation + (Math.PI / 2);
+        pivot.rotation.z = satellite.startingPoint;
+        this.satelliteControl[satellite.id] = { pivot };
+        this.scene.add(pivot);
     }
 }
 
