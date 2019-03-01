@@ -12,6 +12,17 @@ import { mapTexture } from './utils/mapTexture';
 
 const GLOBE_SIZE = 8;
 
+interface SatelliteInterface {
+    rotation : number;
+    radius : number;
+}
+
+const SATELLITE : Array<SatelliteInterface> = [
+    { rotation: Math.PI * (1/3), radius: GLOBE_SIZE + 2  },
+    { rotation: Math.PI * (2/3), radius: GLOBE_SIZE + 4 },
+    { rotation: Math.PI, radius: GLOBE_SIZE + 3 },
+];
+
 const wrapperStyle : React.CSSProperties = {
     flex: 1,
     padding: '3px',
@@ -22,27 +33,6 @@ const innerStyle : React.CSSProperties = {
     flex: 1,
     border: '1px solid #444',
     overflow: 'hidden',
-};
-
-const vertex = ([longitude, latitude], radius) => {
-    const lambda = longitude * Math.PI / 180;
-    const phi = latitude * Math.PI / 180;
-    return new THREE.Vector3(
-        radius * Math.cos(phi) * Math.cos(lambda),
-        radius * Math.sin(phi),
-        -radius * Math.cos(phi) * Math.sin(lambda)
-    );
-};
-
-const wireframe = (multilinestring, radius, material) => {
-    const geometry = new THREE.Geometry();
-    for (const P of multilinestring.coordinates) {
-        for (let p0, p1 = vertex(P[0], radius), i = 1; i < P.length; ++i) {
-            geometry.vertices.push(p0 = p1, p1 = vertex(P[i], radius));
-        // geometry.faces.push( new THREE.Face3( 0, -1, -2 ) );
-        }
-    }
-    return new THREE.LineSegments(geometry, material);
 };
 
 class Universe extends React.Component {
@@ -66,6 +56,7 @@ class Universe extends React.Component {
         this.renderGlobe();
         this.renderLight();
         this.loadLand();
+        this.loadCloud();
     }
     public componentWillUnmount() {
         window.removeEventListener('resize', this.resizeHandler);
@@ -81,21 +72,21 @@ class Universe extends React.Component {
     private init = () => {
         this.scene = new THREE.Scene();
         this.camera = new THREE.PerspectiveCamera(30, null, 0.1, 1000);
-        this.camera.position.set(40, 0, 0);
+        this.camera.position.set(40, 5, 20);
         this.camera.lookAt(new THREE.Vector3(0, 0, 0));
         this.renderer = new THREE.WebGLRenderer({alpha: true, antialias: true});
         this.control = new (OrbitControl(THREE))(this.camera, this.renderer.domElement);
         this.control.zoomSpeed = 0.2;
-        this.camera.position.z = 1;
         this.renderer.render(this.scene, this.camera);
         this.renderer.setSize(this.content.clientWidth, this.content.clientHeight);
         this.content.appendChild(this.renderer.domElement);
         this.resizeHandler();
         window.addEventListener('resize', this.resizeHandler);
         this.animate();
+        SATELLITE.forEach(it => this.addSatellite(it));
     }
     private renderLight = () => {
-        const light = new THREE.SpotLight(new THREE.Color(0xffffff), 0.6);
+        const light = new THREE.SpotLight(new THREE.Color(0xffffff), 0.8);
         light.penumbra = 1;
         light.angle = 0.4;
         light.castShadow = true;
@@ -166,15 +157,37 @@ class Universe extends React.Component {
             bumpScale: 0.2,
         });
         this.globe.material = mapMaterial;
+
+    }
+    private loadCloud = async () => {
         const loader = new THREE.TextureLoader();
         const mapOverlay = loader.load('https://raw.githubusercontent.com/turban/webgl-earth/master/images/fair_clouds_4k.png');
         this.cloudLayer.material = new THREE.MeshPhongMaterial({
             map: mapOverlay,
-            color: 0xcccccc,
+            color: 0xdddddd,
             transparent: true,
             opacity: 1,
             // depthTest: false,
         });
+    }
+    private addSatellite = (satellite : SatelliteInterface) => {
+        const circleGeom = new THREE.CircleGeometry(satellite.radius, 64);
+        circleGeom.vertices.shift();
+        circleGeom.vertices.push(circleGeom.vertices[0].clone());
+        const circle = new THREE.LineSegments(
+            circleGeom,
+            new THREE.LineDashedMaterial({
+                color: 'cyan',
+                opacity: 0.3,
+                transparent: true,
+                linewidth: 1,
+                scale: 1,
+                dashSize: 3,
+                gapSize: 1,
+            }),
+        );
+        circle.rotation.x = satellite.rotation + (Math.PI / 2);
+        this.scene.add(circle);
     }
 }
 

@@ -24,7 +24,7 @@ export const mapTexture = (geojson) => {
 
   // console.log(path);
 
-  context.strokeStyle = '#00aaff';
+  context.strokeStyle = '#00ffff';
   context.lineWidth = 1;
   context.fillStyle = '#004080';
 
