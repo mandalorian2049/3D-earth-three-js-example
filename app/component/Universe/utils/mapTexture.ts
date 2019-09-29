@@ -15,7 +15,7 @@ export const mapTexture = (geojson) => {
   const context = canvas.node().getContext('2d');
   context.beginPath();
   context.rect(-1, -1, canvas.node().width + 1, canvas.node().height + 1);
-  context.fillStyle = '#001A33';
+  context.fillStyle = '#F5F5F5';
   context.fill();
 
   const path = geoPath()
@@ -24,9 +24,9 @@ export const mapTexture = (geojson) => {
 
   // console.log(path);
 
-  context.strokeStyle = '#00ffff';
+  context.strokeStyle = '#ffffff';
   context.lineWidth = 1;
-  context.fillStyle = '#004080';
+  context.fillStyle = '#CCC';
 
   context.beginPath();
 

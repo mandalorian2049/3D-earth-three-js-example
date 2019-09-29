@@ -1,4 +1,5 @@
 import React from 'react';
+import { geoInterpolate } from 'd3-geo';
 import {
     mesh as topoMesh,
     feature as topoFeature,
@@ -9,6 +10,41 @@ import OrbitControl from 'three-orbit-controls';
 
 import cloudMap from '@/assets/fair_clouds.png';
 import { mapTexture } from './utils/mapTexture';
+import { positionOnSphereFromLatLon } from './utils/position';
+
+const getRandomInt = (min, max) => {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+};
+
+const clamp = (num, min, max) => (num <= min ? min : (num >= max ? max : num));
+
+const CURVE_MIN_ALTITUDE = 5;
+const CURVE_MAX_ALTITUDE = 10;
+const CURVE_SEGMENTS = 32;
+
+const getSpline = (prevCoord, currentCoord, size) => {
+    const startLat = prevCoord.lat;
+    const startLng = prevCoord.lon;
+    const endLat = currentCoord.lat;
+    const endLng = currentCoord.lon;
+    const start = positionOnSphereFromLatLon(startLat, startLng, size);
+    const end = positionOnSphereFromLatLon(endLat, endLng, size);
+    const startVec = new THREE.Vector3(start.x, start.y, start.z);
+    const endVec = new THREE.Vector3(end.x, end.y, end.z);
+    const altitude = clamp(startVec.distanceTo(endVec) * 0.5, CURVE_MIN_ALTITUDE, CURVE_MAX_ALTITUDE);
+    const interpolate = geoInterpolate([startLng, startLat], [endLng, endLat]);
+    const midCoord1 = interpolate(0.4);
+    const midCoord2 = interpolate(0.7);
+    const mid1 = positionOnSphereFromLatLon(midCoord1[1], midCoord1[0], size + altitude);
+    const mid2 = positionOnSphereFromLatLon(midCoord2[1], midCoord2[0], size + altitude);
+    return {
+      start,
+      end,
+      spline: new THREE.CubicBezierCurve3(start, mid1, mid2, end),
+    };
+  };
 
 const GLOBE_SIZE = 8;
 
@@ -25,6 +61,34 @@ const SATELLITE : Array<SatelliteInterface> = [
     { id: 'b', rotation: Math.PI * (2/3), radius: GLOBE_SIZE + 4, startingPoint: Math.PI * (2 / 3), speed: 0.5 },
     { id: 'c', rotation: Math.PI, radius: GLOBE_SIZE + 3, startingPoint: Math.PI * (4 / 3), speed: -1.2 },
 ];
+
+const CITIES = {
+    Lhasa: { lat: 29.652491, lon: 91.172112 },
+    Vladivostok: { lat: 43.10562, lon: 131.87353 },
+    'Port Prince': { lat: 18.5445, lon: -72.363 },
+    'Taipei': { lat: 25.105497, lon: 121.597366 },
+    'Chicago': { lat: 41.881832, lon: -87.623177 },
+    'Osaka': { lat: 34.652500, lon: 135.506302 },
+    'Abu Dhabi': { lat: 24.466667, lon: 54.366669 },
+    'Dakar': { lat: 14.6937, lon: -17.44406 },
+    Berlin: { lat: 52.520008, lon: 13.404954 },
+    'Damascus': { lat: 33.510414, lon: 36.278336 },
+    Hawaii: { lat: 21.289373, lon: -157.917480 },
+    Sydney: { lat: -33.865143, lon: 151.209900 },
+    Bangalore: { lat: 12.972442, lon: 77.580643 },
+    Nairobi: { lat: -1.291514, lon: 36.874260 },
+    'Mexico City': { lat: 19.432608, lon: -99.133209 },
+    'Istanbul': { lat: 41.015137, lon: 28.979530 },
+    'Salar de Uyuni': { lat: -20.266562, lon: -67.620552 },
+    'Almaty': { lat: 43.238949, lon: 76.889709 },
+    'Singapore': { lat: 1.290270, lon: 103.851959 },
+    Lima: { lat: -12.046374, lon: -77.042793 },
+    Cairo: { lat: 31.2357116, lon: 30.0444196 },
+    Catalonia: { lat: 41.617592, lon: 0.620015 },
+    Alaska: { lat: 66.160507, lon: -153.369141 },
+    'Puerto Rico': { lat: 18.200178, lon: -66.664513 },
+    LA: { lat: 34.052235, lon: -118.243683 },
+};
 
 const wrapperStyle : React.CSSProperties = {
     flex: 1,
@@ -59,9 +123,10 @@ class Universe extends React.Component {
         this.init();
         this.renderGlobe();
         this.renderLight();
-        this.loadCloud();
+        // this.loadCloud();
         this.loadLand();
-        SATELLITE.forEach(it => this.addSatellite(it));
+        this.loadCities();
+        // SATELLITE.forEach(it => this.addSatellite(it));
     }
     public componentWillUnmount() {
         window.removeEventListener('resize', this.resizeHandler);
@@ -90,61 +155,27 @@ class Universe extends React.Component {
         this.animate();
     }
     private renderLight = () => {
-        const light = new THREE.SpotLight(new THREE.Color(0xffffff), 0.4);
-        light.penumbra = 1;
-        light.angle = 0.4;
-        light.castShadow = true;
-        this.camera.add(light);
-        this.scene.add(this.camera);
-        // const sun = new THREE.PointLight(new THREE.Color(0xffffff), 0.5);
-        // sun.position.set(40, 0, -40);
-        // this.scene.add(sun);
+        const light = new THREE.AmbientLight(0xffffff);
+        this.scene.add(light);
     }
     private renderGlobe = () => {
-        const cloud = new THREE.SphereGeometry(GLOBE_SIZE + 0.2, 32, 32);
-        const material = new THREE.MeshLambertMaterial({
-            color: 0x003366,
+        // const cloud = new THREE.SphereGeometry(GLOBE_SIZE + 0.2, 32, 32);
+        const material = new THREE.MeshBasicMaterial({
+            color: 0xffffff,
             // opacity: 0.9,
         });
-        const tM = new THREE.MeshLambertMaterial({
-            opacity: 0.0,
-            transparent: true,
-        });
-
-        this.cloudLayer = new THREE.Mesh(cloud, tM);
-        const shieldLayer = new THREE.Mesh(
-            new THREE.SphereGeometry(GLOBE_SIZE + 0.25, 32, 32),
-            new THREE.MeshStandardMaterial({
-                color: 0xffffff,
-                opacity: 0.2,
-                transparent: true,
-                metalness: 1,
-                roughness: 0.6,
-            }),
-        );
         this.globe = new THREE.Mesh(
             new THREE.SphereGeometry(GLOBE_SIZE, 32, 32),
             material,
         );
-        this.scene.add(this.globe, this.cloudLayer, shieldLayer);
+        this.scene.add(this.globe);
     }
     private animate = () => {
         this.control.update();
         requestAnimationFrame(this.animate);
         if (this.globe) {
             this.globe.rotation.y += 0.0007;
-            // this.globe.rotation.x += 0.001;
         }
-        if (this.cloudLayer) {
-            this.cloudLayer.rotation.y += 0.001;
-        }
-        SATELLITE.forEach((it) => {
-            const satellite = this.satelliteControl[it.id];
-            if (satellite && satellite.pivot) {
-                satellite.pivot.rotation.z += (0.01 * it.speed);
-            }
-
-        });
         this.renderer.render(this.scene, this.camera);
     }
     private setContent = ref => this.content = ref;
@@ -154,15 +185,11 @@ class Universe extends React.Component {
         const countries = topoFeature(world, world.objects.countries);
         const texturCanvas = mapTexture(countries);
         const map = new THREE.Texture(texturCanvas.node());
-        const bumpLoader = new THREE.TextureLoader();
-        const bumpMap = bumpLoader.load('https://raw.githubusercontent.com/turban/webgl-earth/master/images/elev_bump_4k.jpg');
         map.needsUpdate = true;
         texturCanvas.remove();
 
         const mapMaterial  = new THREE.MeshPhongMaterial({
             map,
-            bumpMap,
-            bumpScale: 0.2,
         });
         this.globe.material = mapMaterial;
 
@@ -233,6 +260,53 @@ class Universe extends React.Component {
         pivot.rotation.z = satellite.startingPoint;
         this.satelliteControl[satellite.id] = { pivot };
         this.scene.add(pivot);
+    }
+    private loadCities = () => {
+        Object.keys(CITIES).forEach((name) => {
+            const { lat, lon } = CITIES[name];
+            const { x, y, z } = positionOnSphereFromLatLon(lat, lon, GLOBE_SIZE);
+            const material = new THREE.MeshBasicMaterial({ color: '#008888' });
+            const obj = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 8), material);
+            obj.position.set(x, y, z);
+            this.globe.add(obj);
+        });
+        const addLines = () => {
+            setInterval(() => {
+                const cities = Object.keys(CITIES);
+                const firstPlace = getRandomInt(0, cities.length - 1);
+                const secondPlace = getRandomInt(0, cities.length - 1);
+                const geo = new THREE.BufferGeometry();
+                const { spline } : any = getSpline(CITIES[cities[firstPlace]], CITIES[cities[secondPlace]], GLOBE_SIZE);
+                const points = new Float32Array(CURVE_SEGMENTS * 3);
+                const vertices = spline.getPoints(CURVE_SEGMENTS - 1);
+                for (let i = 0, j = 0; i < vertices.length; i++) {
+                    const vertex = vertices[i];
+                    points[j++] = vertex.x;
+                    points[j++] = vertex.y;
+                    points[j++] = vertex.z;
+                }
+                geo.addAttribute('position', new THREE.BufferAttribute(points, 3));
+                const chain = new THREE.Line(geo, new THREE.LineBasicMaterial({
+                    color: 0x008888, opacity: 1, transparent: true,
+                }));
+                this.globe.add(chain);
+                let drawProgress = 0;
+                const animation = () => {
+                    if (drawProgress <= CURVE_SEGMENTS) {
+                        geo.setDrawRange(0, drawProgress);
+                        drawProgress += 2;
+                        requestAnimationFrame(animation);
+                    } else {
+                        setTimeout(() => {
+                            this.globe.remove(chain);
+                        }, 200);
+                    }
+                };
+                animation();
+            }, 300);
+        };
+
+        addLines();
     }
 }
 
