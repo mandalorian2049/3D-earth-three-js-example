@@ -1,1 +1,1 @@
-https://catsass19.github.io/three-js-example/
+https://catsass19.github.io/3D-earth-three-js-example/
