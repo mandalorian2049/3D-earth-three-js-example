@@ -41,7 +41,7 @@
   "bugs": {
     "url": "https://github.com/catsass19/My-Webapp-Boilerplate/issues"
   },
-  "homepage": "https://github.com/catsass19/My-Webapp-Boilerplate#readme",
+  "homepage": "https://catsass19.github.io/3D-earth-three-js-example/",
   "dependencies": {
     "@types/lodash-es": "^4.17.1",
     "@types/react": "^16.8",
