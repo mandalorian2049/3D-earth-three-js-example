@@ -52,7 +52,7 @@
     "lodash": "^4.17.10",
     "react": "^16.8",
     "react-dom": "^16.8",
-    "three": "^0.101.1",
+    "three": "^0.125.0",
     "three-orbit-controls": "^82.1.0",
     "topojson": "^3.0.2"
   },
