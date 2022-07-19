@@ -3,6 +3,28 @@ import * as THREE from "three";
 import debounce from "lodash/debounce";
 import OrbitControl from "three-orbit-controls";
 
+const colorOption = [0x666666, 0xaaaaaa];
+
+let i = 0;
+const getColor = () => {
+  i = (i + 1) % colorOption.length;
+  return new THREE.Color(colorOption[i]);
+};
+
+const getVectors = (num: number) => {
+  const vectors = [];
+  for (i = 0; i < num; i++) {
+    vectors.push(
+      new THREE.Vector3(
+        Math.random() * 2 - 1,
+        Math.random() * 3 - 0.75,
+        Math.random() * 3 - 0.75
+      )
+    );
+  }
+  return vectors;
+};
+
 const wrapperStyle: React.CSSProperties = {
   flex: 1,
   padding: "3px",
@@ -21,6 +43,8 @@ class Universe extends React.Component {
   private camera;
   private renderer;
   private control;
+
+  private sumVector = new THREE.Vector3(0, 0, 0);
 
   private resizeHandler = debounce(() => {
     this.camera.aspect = this.content.clientWidth / this.content.clientHeight;
@@ -47,7 +71,7 @@ class Universe extends React.Component {
   private init = () => {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(30, null, 0.1, 1000);
-    this.camera.position.set(40, 5, 20);
+    this.camera.position.set(40, 15, 40);
     this.camera.lookAt(new THREE.Vector3(0, 0, 0));
     this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     this.control = new (OrbitControl(THREE))(
@@ -64,7 +88,7 @@ class Universe extends React.Component {
   };
 
   private addAxis = () => {
-    const gridHelper = new THREE.GridHelper(100, 50, 0x333333, 0x222222);
+    const gridHelper = new THREE.GridHelper(100, 30, 0x202020, 0x151515);
     this.scene.add(gridHelper);
   };
 
@@ -76,16 +100,12 @@ class Universe extends React.Component {
   private setContent = (ref) => (this.content = ref);
 
   private renderArrows = () => {
-    this.addArrow(new THREE.Vector3(1, 2, 0), 10, 0xffffff);
-    this.addArrow(new THREE.Vector3(1, 2, 1), 10, 0xffff00);
-    this.addArrow(new THREE.Vector3(2, 2, 0), 10, 0xff00ff);
-    this.addArrow(new THREE.Vector3(1, 2, 2), 10, 0x00ffff);
-    this.addArrow(new THREE.Vector3(1, 1, 1), 10, 0xf0f0ff);
-    this.addArrow(new THREE.Vector3(2, 2, 2), 10, 0xfff0f0);
-    this.addArrow(new THREE.Vector3(1, -5, -1), 10, 0xff0f0f);
-    this.addArrow(new THREE.Vector3(0, 1, 2), 10, 0xf0f0ff);
-    this.addArrow(new THREE.Vector3(1, 2, 3), 10, 0x0f0fff);
-    this.addArrow(new THREE.Vector3(3, 2, 0), 10, 0x0ffff0);
+    getVectors(60).forEach((vector) => {
+      this.addArrow(vector, Math.random() * 2 + 2, getColor());
+      this.sumVector.add(vector);
+    });
+
+    this.addArrow(this.sumVector, 15, new THREE.Color("cyan"));
   };
 
   private addArrow = (dir, length = 10, color = 0xffff00) => {
