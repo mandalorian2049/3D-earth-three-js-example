@@ -3,7 +3,7 @@ import * as THREE from "three";
 import debounce from "lodash/debounce";
 import OrbitControl from "three-orbit-controls";
 
-const colorOption = [0x444444, 0x666666, 0xaaaaaa];
+const colorOption = [0x666666, 0x888888, 0xaaaaaa];
 
 let i = 0;
 const getColor = () => {
@@ -43,6 +43,8 @@ class Universe extends React.Component {
   private camera;
   private renderer;
   private control;
+
+  private origin = new THREE.Vector3(0, 0, 0);
 
   private resizeHandler = debounce(() => {
     this.camera.aspect = this.content.clientWidth / this.content.clientHeight;
@@ -98,21 +100,19 @@ class Universe extends React.Component {
   private setContent = (ref) => (this.content = ref);
 
   private renderArrows = () => {
-    getVectors(3384).forEach((vector) => {
-      this.addArrow(vector, Math.random() * 5, getColor());
+    getVectors(3348).forEach((vector) => {
+      this.addArrow(vector, Math.random() + 4, getColor());
     });
 
-    const sumVector = new THREE.Vector3(0, 1, 1);
-    this.addArrow(sumVector, 15, new THREE.Color("cyan"), 1);
+    const sum = new THREE.Vector3(1, 1.5, 1);
+    sum.normalize();
+    this.addArrow(sum, 15, new THREE.Color("cyan"), 1);
   };
 
   private addArrow = (dir, length = 10, color = 0xffff00, headSize = 0.4) => {
-    //normalize the direction vector (convert to vector of length 1)
-    dir.normalize();
-    const origin = new THREE.Vector3(0, 0, 0);
     const arrowHelper = new THREE.ArrowHelper(
       dir,
-      origin,
+      this.origin,
       length,
       color,
       headSize
