@@ -3,7 +3,7 @@ import * as THREE from "three";
 import debounce from "lodash/debounce";
 import OrbitControl from "three-orbit-controls";
 
-const colorOption = [0x666666, 0xaaaaaa];
+const colorOption = [0x444444, 0x666666, 0xaaaaaa];
 
 let i = 0;
 const getColor = () => {
@@ -17,8 +17,8 @@ const getVectors = (num: number) => {
     vectors.push(
       new THREE.Vector3(
         Math.random() * 2 - 1,
-        Math.random() * 3 - 0.75,
-        Math.random() * 3 - 0.75
+        Math.random() * 2 - 1,
+        Math.random() * 2 - 1
       )
     );
   }
@@ -44,8 +44,6 @@ class Universe extends React.Component {
   private renderer;
   private control;
 
-  private sumVector = new THREE.Vector3(0, 0, 0);
-
   private resizeHandler = debounce(() => {
     this.camera.aspect = this.content.clientWidth / this.content.clientHeight;
     this.camera.updateProjectionMatrix();
@@ -70,8 +68,8 @@ class Universe extends React.Component {
   }
   private init = () => {
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(30, null, 0.1, 1000);
-    this.camera.position.set(40, 15, 40);
+    this.camera = new THREE.PerspectiveCamera(50, null, 0.1, 1000);
+    this.camera.position.set(40, 5, 0);
     this.camera.lookAt(new THREE.Vector3(0, 0, 0));
     this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
     this.control = new (OrbitControl(THREE))(
@@ -88,7 +86,7 @@ class Universe extends React.Component {
   };
 
   private addAxis = () => {
-    const gridHelper = new THREE.GridHelper(100, 30, 0x202020, 0x151515);
+    const gridHelper = new THREE.GridHelper(100, 30, 0x444444, 0x333333);
     this.scene.add(gridHelper);
   };
 
@@ -100,19 +98,25 @@ class Universe extends React.Component {
   private setContent = (ref) => (this.content = ref);
 
   private renderArrows = () => {
-    getVectors(60).forEach((vector) => {
-      this.addArrow(vector, Math.random() * 2 + 2, getColor());
-      this.sumVector.add(vector);
+    getVectors(3384).forEach((vector) => {
+      this.addArrow(vector, Math.random() * 5, getColor());
     });
 
-    this.addArrow(this.sumVector, 15, new THREE.Color("cyan"));
+    const sumVector = new THREE.Vector3(0, 1, 1);
+    this.addArrow(sumVector, 15, new THREE.Color("cyan"), 1);
   };
 
-  private addArrow = (dir, length = 10, color = 0xffff00) => {
+  private addArrow = (dir, length = 10, color = 0xffff00, headSize = 0.4) => {
     //normalize the direction vector (convert to vector of length 1)
     dir.normalize();
     const origin = new THREE.Vector3(0, 0, 0);
-    const arrowHelper = new THREE.ArrowHelper(dir, origin, length, color, 0.5);
+    const arrowHelper = new THREE.ArrowHelper(
+      dir,
+      origin,
+      length,
+      color,
+      headSize
+    );
     this.scene.add(arrowHelper);
   };
 }
