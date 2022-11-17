@@ -3,7 +3,7 @@
     "allowSyntheticDefaultImports": true,
     "module": "esnext",
     "lib": ["esnext", "dom"],
-    "target": "es5",
+    "target": "es6",
     "sourceMap": true,
     "jsx": "react",
     "importHelpers": true,
@@ -11,15 +11,9 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./app/*"],
-      "lodash/*": ["node_modules/@types/lodash-es/*"],
+      "lodash/*": ["node_modules/@types/lodash-es/*"]
     }
   },
-  "include": [
-    "./app/**/*.ts",
-    "./app/**/*.tsx"
-  ],
-  "exclude": [
-    "node_modules",
-    "./app/**/*/__tests__"
-  ]
+  "include": ["./app/**/*.ts", "./app/**/*.tsx"],
+  "exclude": ["node_modules", "./app/**/*/__tests__"]
 }
