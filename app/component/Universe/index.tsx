@@ -10,18 +10,19 @@ enum CAM_MOVING_DIRECTION {
 }
 
 export const CAMERA_POSITION_Y = {
-  START: 5,
-  ZOOM_IN: 0.1,
-  ZOOM_OUT: 30,
+  START: 8,
+  ZOOM_IN: -1,
+  ZOOM_OUT: 40,
 };
 
 const colorOption = [
-  0x111111, 0x111111, 0x111111, 0x111111, 0x111111, 0x112222, 0x113333,
-  0x114444, 0x335555, 0x88dddd,
+  0x000000, 0x000000, 0x111111, 0x111111, 0x113333, 0x335555,
 ];
 
+const colorOption2 = [0x446666, 0x88dddd, 0x446666, 0x88dddd, 0x88ffff];
+
 let i = 0;
-const getColor = () => {
+const getColor = (colorOption) => {
   i = (i + 1) % colorOption.length;
   return new THREE.Color(colorOption[i]);
 };
@@ -33,6 +34,20 @@ const getVectors = (num: number) => {
       new THREE.Vector3(
         Math.random() * 2 - 1,
         Math.random() * 2 - 1,
+        Math.random() * 2 - 1
+      ).normalize()
+    );
+  }
+  return vectors;
+};
+
+const getLightVectors = (num: number) => {
+  const vectors = [];
+  for (i = 0; i < num; i++) {
+    vectors.push(
+      new THREE.Vector3(
+        Math.random() * 2 - 1,
+        Math.random() * 2,
         Math.random() * 2 - 1
       ).normalize()
     );
@@ -95,31 +110,33 @@ class Universe extends React.Component {
       return;
     }
 
-    const yPosition = {
-      [CAM_MOVING_DIRECTION.IN]: CAMERA_POSITION_Y.ZOOM_IN,
-      [CAM_MOVING_DIRECTION.OUT]: CAMERA_POSITION_Y.ZOOM_OUT,
-    }[this.camMovingDirection];
-
-    const duration = {
-      [CAM_MOVING_DIRECTION.IN]: 2,
-      [CAM_MOVING_DIRECTION.OUT]: 6,
-    }[this.camMovingDirection];
-
-    this.moveCamOnY(yPosition, duration);
-
     if (this.camMovingDirection === CAM_MOVING_DIRECTION.IN) {
+      this.zoomIn();
       this.camMovingDirection = CAM_MOVING_DIRECTION.OUT;
       return;
     }
 
     if (this.camMovingDirection === CAM_MOVING_DIRECTION.OUT) {
+      this.zoomOut();
       finished = true;
       return;
     }
   }
 
-  private moveCamOnY(y: number, duration = 1.5) {
-    gsap.to(this.camera.position, { y, duration });
+  private zoomIn() {
+    this.renderLightArrows();
+    gsap.to(this.camera.position, {
+      y: CAMERA_POSITION_Y.ZOOM_IN,
+      duration: 6,
+      ease: "power4.inOut",
+    });
+  }
+  private zoomOut() {
+    gsap.to(this.camera.position, {
+      y: CAMERA_POSITION_Y.ZOOM_OUT,
+      duration: 2,
+      ease: "power1.inOut",
+    });
   }
 
   private cameraRotation = () => {
@@ -142,7 +159,7 @@ class Universe extends React.Component {
   }
   private init = () => {
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(50, null, 3, 1000);
+    this.camera = new THREE.PerspectiveCamera(50, null, 4, 1000);
     this.camera.position.set(0, CAMERA_POSITION_Y.START, 0);
     this.camera.lookAt(new THREE.Vector3(0, 0, 0));
     this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -173,23 +190,45 @@ class Universe extends React.Component {
   private setContent = (ref) => (this.content = ref);
 
   private renderArrows = () => {
-    getVectors(3000).forEach((vector) => {
-      this.addArrow(vector, Math.random() / 4 + 2, getColor());
+    getVectors(2000).forEach((vector) => {
+      this.addArrow(
+        vector,
+        vector.multiplyScalar((Math.random() + 0.1) * 1.5),
+        Math.random() / 4 + 4,
+        getColor(colorOption)
+      );
     });
 
-    const sum = new THREE.Vector3(1, 1.5, 1);
-    sum.normalize();
+    // const sum = new THREE.Vector3(1, 1.5, 1);
+    // sum.normalize();
     // this.addArrow(sum, 15, new THREE.Color("cyan"), 1);
   };
 
-  private addArrow = (dir, length = 10, color = 0xffff00, headSize = 0.2) => {
-    const arrow = new THREE.ArrowHelper(
-      dir,
-      dir.multiplyScalar((Math.random() + 0.1) * 1.5),
-      length,
-      color,
-      headSize
-    );
+  private renderLightArrows = () => {
+    const vectors = getLightVectors(500);
+    for (let i = 0; i < vectors.length; i++) {
+      const vector = vectors[i];
+      (async () => {
+        await new Promise((res) => setTimeout(res, Math.random() * 5000));
+        this.addArrow(
+          vector,
+          vector.multiplyScalar((Math.random() + 0.1) * 1.5),
+          Math.random() / 8 + 4,
+          getColor(colorOption2),
+          0.1
+        );
+      })();
+    }
+  };
+
+  private addArrow = (
+    dir,
+    start,
+    length = 10,
+    color = 0xffff00,
+    headSize = 0.2
+  ) => {
+    const arrow = new THREE.ArrowHelper(dir, start, length, color, headSize);
     this.scene.add(arrow);
   };
 }
