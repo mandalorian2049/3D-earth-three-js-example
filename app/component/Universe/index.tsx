@@ -10,9 +10,9 @@ enum CAM_MOVING_DIRECTION {
 }
 
 export const CAMERA_POSITION_Y = {
-  START: 8,
+  START: 9,
   ZOOM_IN: -1,
-  ZOOM_OUT: 40,
+  ZOOM_OUT: 120,
 };
 
 const colorOption = [
@@ -20,6 +20,10 @@ const colorOption = [
 ];
 
 const colorOption2 = [0x446666, 0x88dddd, 0x446666, 0x88dddd, 0x88ffff];
+
+const longArrowVector = new THREE.Vector3(-1, 0, -1);
+const shortArrowVector = new THREE.Vector3(1, 0, -1);
+const arrowOrigin = new THREE.Vector3(0, -3, 0);
 
 let i = 0;
 const getColor = (colorOption) => {
@@ -69,12 +73,24 @@ const innerStyle: React.CSSProperties = {
 let finished = false;
 let stopRotate = false;
 
+let longArrowGrowSpeed = 0.0015;
+let longArrowLength = 0.1;
+const LONG_ARROW_MAX_LENGTH = 60;
+
+let shortArrowGrowSpeed = 0.001;
+let shortArrowLength = 0.1;
+const SHORT_ARROW_MAX_LENGTH = 20;
+
 class Universe extends React.Component {
   private content;
   private scene;
   private camera;
   private renderer;
   private control;
+
+  private longArrow;
+  private shortArrow;
+  private sphere;
 
   private camMovingDirection: CAM_MOVING_DIRECTION = CAM_MOVING_DIRECTION.IN;
 
@@ -90,18 +106,7 @@ class Universe extends React.Component {
     this.init();
     // this.addAxis();
     this.renderArrows();
-
-    document.addEventListener(
-      "keydown",
-      (event) => {
-        const { code } = event;
-        if (code === "Space") {
-          stopRotate = true;
-          this.cameraMovingHandler();
-        }
-      },
-      false
-    );
+    this.startListeningKeyboard();
   }
 
   private cameraMovingHandler() {
@@ -129,6 +134,36 @@ class Universe extends React.Component {
       y: CAMERA_POSITION_Y.ZOOM_IN,
       duration: 6,
       ease: "power4.inOut",
+      onUpdate: () => {
+        if (this.sphere) {
+          return;
+        }
+        if (this.camera.position.y < 0.5) {
+          this.addGlowSphere();
+          this.longArrow = new THREE.ArrowHelper(
+            longArrowVector,
+            arrowOrigin,
+            longArrowLength,
+            0x44aaaa
+          );
+          this.shortArrow = new THREE.ArrowHelper(
+            shortArrowVector,
+            arrowOrigin,
+            0.1,
+            "red",
+            0.01,
+            0.01
+          );
+          this.scene.add(this.longArrow);
+          this.scene.add(this.shortArrow);
+          this.longArrowGrow();
+          this.shortArrowGrow();
+        }
+      },
+      onComplete: () => {
+        this.scene.remove(this.sphere);
+        this.startListeningKeyboard();
+      },
     });
   }
   private zoomOut() {
@@ -136,6 +171,11 @@ class Universe extends React.Component {
       y: CAMERA_POSITION_Y.ZOOM_OUT,
       duration: 2,
       ease: "power1.inOut",
+      onComplete: () => {
+        longArrowGrowSpeed = 0.15;
+        shortArrowGrowSpeed = 0.05;
+        this.startListeningKeyboard();
+      },
     });
   }
 
@@ -145,6 +185,26 @@ class Universe extends React.Component {
     }
     this.camera.rotation.z += Math.PI / 50000;
   };
+
+  private longArrowGrow() {
+    longArrowLength += longArrowGrowSpeed;
+    this.longArrow?.setLength(longArrowLength);
+    if (longArrowLength <= LONG_ARROW_MAX_LENGTH) {
+      requestAnimationFrame(() => {
+        this.longArrowGrow();
+      });
+    }
+  }
+
+  private shortArrowGrow() {
+    shortArrowLength += shortArrowGrowSpeed;
+    this.shortArrow?.setLength(shortArrowLength);
+    if (shortArrowLength <= SHORT_ARROW_MAX_LENGTH) {
+      requestAnimationFrame(() => {
+        this.shortArrowGrow();
+      });
+    }
+  }
 
   public componentWillUnmount() {
     window.removeEventListener("resize", this.resizeHandler);
@@ -159,7 +219,7 @@ class Universe extends React.Component {
   }
   private init = () => {
     this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(50, null, 4, 1000);
+    this.camera = new THREE.PerspectiveCamera(50, null, 2, 1000);
     this.camera.position.set(0, CAMERA_POSITION_Y.START, 0);
     this.camera.lookAt(new THREE.Vector3(0, 0, 0));
     this.renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
@@ -168,6 +228,7 @@ class Universe extends React.Component {
     //   this.renderer.domElement
     // );
     // this.control.zoomSpeed = 0.2;
+
     this.renderer.render(this.scene, this.camera);
     this.renderer.setSize(this.content.clientWidth, this.content.clientHeight);
     this.content.appendChild(this.renderer.domElement);
@@ -215,7 +276,7 @@ class Universe extends React.Component {
           vector.multiplyScalar((Math.random() + 0.1) * 1.5),
           Math.random() / 8 + 4,
           getColor(colorOption2),
-          0.1
+          0.05
         );
       })();
     }
@@ -226,11 +287,33 @@ class Universe extends React.Component {
     start,
     length = 10,
     color = 0xffff00,
-    headSize = 0.2
+    headSize = 0.1
   ) => {
     const arrow = new THREE.ArrowHelper(dir, start, length, color, headSize);
     this.scene.add(arrow);
   };
+
+  private addGlowSphere() {
+    const geometry = new THREE.SphereGeometry(0.2, 32, 16);
+
+    const material = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+    this.sphere = new THREE.Mesh(geometry, material);
+    this.sphere.position.set(0, -2, 0);
+    this.scene.add(this.sphere);
+  }
+
+  private startListeningKeyboard() {
+    const keyboardListener = (event) => {
+      const { code } = event;
+      if (code === "Space") {
+        stopRotate = true;
+        this.cameraMovingHandler();
+        document.removeEventListener("keydown", keyboardListener);
+      }
+    };
+
+    document.addEventListener("keydown", keyboardListener, false);
+  }
 }
 
 export default Universe;
