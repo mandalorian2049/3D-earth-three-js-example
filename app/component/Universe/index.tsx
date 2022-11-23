@@ -25,9 +25,7 @@ export const CAMERA_POSITION_Y = {
   ZOOM_OUT: 120,
 };
 
-const colorOption = [
-  0x000000, 0x111111, 0x333333, 0x555555, 0x666666, 0xdddddd,
-];
+const colorOption = [0x000000, 0x111111, 0x333333, 0x115555, 0x226666];
 
 const colorOption2 = [0x446666, 0x88dddd, 0x446666, 0x88dddd, 0x88ffff];
 
@@ -142,7 +140,7 @@ class Universe extends React.Component<{}, { show: boolean }> {
   }
 
   private zoomIn() {
-    // this.renderLightArrows();
+    this.renderLightArrows();
     gsap.to(this.camera.position, {
       y: CAMERA_POSITION_Y.ZOOM_IN,
       duration: 6,
