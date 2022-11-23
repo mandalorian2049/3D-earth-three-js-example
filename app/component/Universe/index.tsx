@@ -4,6 +4,16 @@ import debounce from "lodash/debounce";
 import gsap from "gsap";
 // import OrbitControl from "three-orbit-controls";
 
+const Cube = ({ color }) => (
+  <div
+    style={{
+      height: "30px",
+      width: "30px",
+      backgroundColor: color,
+    }}
+  />
+);
+
 enum CAM_MOVING_DIRECTION {
   IN,
   OUT,
@@ -16,7 +26,7 @@ export const CAMERA_POSITION_Y = {
 };
 
 const colorOption = [
-  0x000000, 0x000000, 0x111111, 0x111111, 0x113333, 0x335555,
+  0x000000, 0x111111, 0x333333, 0x555555, 0x666666, 0xdddddd,
 ];
 
 const colorOption2 = [0x446666, 0x88dddd, 0x446666, 0x88dddd, 0x88ffff];
@@ -81,7 +91,7 @@ let shortArrowGrowSpeed = 0.001;
 let shortArrowLength = 0.1;
 const SHORT_ARROW_MAX_LENGTH = 20;
 
-class Universe extends React.Component {
+class Universe extends React.Component<{}, { show: boolean }> {
   private content;
   private scene;
   private camera;
@@ -107,6 +117,9 @@ class Universe extends React.Component {
     // this.addAxis();
     this.renderArrows();
     this.startListeningKeyboard();
+    this.state = {
+      show: false,
+    };
   }
 
   private cameraMovingHandler() {
@@ -129,7 +142,7 @@ class Universe extends React.Component {
   }
 
   private zoomIn() {
-    this.renderLightArrows();
+    // this.renderLightArrows();
     gsap.to(this.camera.position, {
       y: CAMERA_POSITION_Y.ZOOM_IN,
       duration: 6,
@@ -138,6 +151,7 @@ class Universe extends React.Component {
         if (this.sphere) {
           return;
         }
+
         if (this.camera.position.y < 0.5) {
           this.addGlowSphere();
           this.longArrow = new THREE.ArrowHelper(
@@ -161,6 +175,7 @@ class Universe extends React.Component {
         }
       },
       onComplete: () => {
+        this.setState({ show: true });
         this.scene.remove(this.sphere);
         this.startListeningKeyboard();
       },
@@ -213,6 +228,36 @@ class Universe extends React.Component {
   public render() {
     return (
       <div style={wrapperStyle}>
+        {this.state?.show && (
+          <div
+            style={{
+              position: "fixed",
+              top: "30px",
+              right: "30px",
+              border: "1px solid white",
+              borderRadius: "10px",
+              padding: "5px",
+              backgroundColor: "rgba(0, 0, 0, 0.7)",
+              color: "white",
+            }}
+          >
+            <div
+              style={{ margin: "10px", display: "flex", alignItems: "center" }}
+            >
+              <Cube color="red" />
+              <span style={{ marginLeft: "10px" }}>
+                Aggregated Signature size
+              </span>
+            </div>
+            <div
+              style={{ margin: "10px", display: "flex", alignItems: "center" }}
+            >
+              <Cube color="#88ffff" />
+              <span style={{ marginLeft: "10px" }}>Total Signature Size</span>
+            </div>
+          </div>
+        )}
+
         <div ref={this.setContent} style={innerStyle} />
       </div>
     );
