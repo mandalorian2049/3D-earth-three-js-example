@@ -245,15 +245,13 @@ class Universe extends React.Component<{}, { show: boolean }> {
               style={{ margin: "10px", display: "flex", alignItems: "center" }}
             >
               <Cube color="red" />
-              <span style={{ marginLeft: "10px" }}>
-                Aggregated Signature size
-              </span>
+              <span style={{ marginLeft: "10px" }}>Aggregate Signature</span>
             </div>
             <div
               style={{ margin: "10px", display: "flex", alignItems: "center" }}
             >
               <Cube color="#88ffff" />
-              <span style={{ marginLeft: "10px" }}>Total Signature Size</span>
+              <span style={{ marginLeft: "10px" }}>Original Signature</span>
             </div>
           </div>
         )}
