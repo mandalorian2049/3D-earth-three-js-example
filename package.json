@@ -77,6 +77,6 @@
     "webpack-bundle-analyzer": "^2.13.1",
     "webpack-cli": "^3.2.2",
     "webpack-dev-server": "^3.2.1",
-    "webpack-pwa-manifest": "^3.8.0"
+    "webpack-pwa-manifest": "^4.3.0"
   }
 }
